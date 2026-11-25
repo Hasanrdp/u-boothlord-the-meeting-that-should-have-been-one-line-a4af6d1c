@@ -47,6 +47,24 @@ EXPECTED_SHA256 = "153add842fe6492eba7976e41155c3e61d4bdeaa7ae016150860e88f6a40a
 EXPECTED_BYTES = 140
 
 
+def verify(path, data):
+    """Read the written file back and confirm it is exactly `data`."""
+    try:
+        with open(path, "rb") as f:
+            actual = f.read()
+    except OSError as exc:
+        print(f"cannot read back {path}: {exc}", file=sys.stderr)
+        return False
+    if actual != data:
+        print(f"read-back mismatch: {len(actual)} bytes, expected {len(data)}",
+              file=sys.stderr)
+        return False
+    if hashlib.sha256(actual).hexdigest() != EXPECTED_SHA256:
+        print("read-back sha256 mismatch", file=sys.stderr)
+        return False
+    return True
+
+
 def main() -> int:
     text = LINE
     # The gate: /output/entry.txt must be UTF-8 text of 1 to 200
@@ -74,6 +92,10 @@ def main() -> int:
     path = os.path.join(out_dir, "entry.txt")
     with open(path, "w", encoding="utf-8", newline="") as f:
         f.write(text)
+    # Read the file back and confirm the exact bytes landed on disk.
+    verified = verify(path, encoded)
+    if not verified:
+        return 1
     return 0
 
 
